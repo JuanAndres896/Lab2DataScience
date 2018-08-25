@@ -1,0 +1,122 @@
+---
+title: "Laboratorio No. 2 "
+date: "22 de agosto de 2018"
+output:
+  word_document: default
+  html_document: default
+---
+
+## Cargar Archivo de train
+Se utilizaron las librerias class, lattice, ggplot2, y caret, debido a que estas son fundamentales para las regresiones lineales y el agrupamiento por KNN.  
+Para el conjunto de datos, se trabajo unicamente con el dataset train.csv
+```{r}
+set.seed(0)
+library(class)
+library(lattice)
+library(ggplot2)
+library(caret)
+datos<- read.csv("train.csv")
+```
+
+## Separar los datos en conjunto de entrenamiento y prueba
+Como especifica las instrucciones del laboratorio, se separo el conjunto de datos train en 2 conjuntos, el conjunto de **train** con el 60% de los datos y el conjunto **test** con el 40% de los datos. Para separarlos se utilizo la funcion sample(), que realiza un muestreo dado un conjunto de datos y una cantidad de elementos; el porcentaje por la cantidad de datos.
+```{r}
+porcentaje<-0.6
+muestra<-sample(1:nrow(datos),porcentaje*nrow(datos))
+train<-datos[muestra,]
+test<-datos[-muestra,]
+```
+
+## Separar variables en datos continuos, discretos y categoricos
+como en el Laboratorio 1, se clasificaron las variables del conjunto de datos en categoricas y en numericas para realizar los modelos de regresion lineal y el modelo KNN. Para no utilizar tantos datos, se decidio trabajar unicamente con los conjuntos **trainC** y **testC** que contienen unicamente datos numericos; incluyendo algunos valores numericos categoricos, debido a que el Cluster realizado en el laboratorio anterior mostraba que la variable ***OverallQual*** era clave al momento de separar las observaciones en los clusters.
+```{r}
+trainC<-train[,c("MasVnrType","LotFrontage","LotArea","BsmtFinSF1","BsmtFinSF2","BsmtUnfSF","TotalBsmtSF","X1stFlrSF","X2ndFlrSF","LowQualFinSF","GrLivArea","GarageArea","WoodDeckSF","OpenPorchSF","EnclosedPorch","X3SsnPorch","ScreenPorch","PoolArea","YearBuilt","YearRemodAdd","BsmtFullBath","BsmtHalfBath","FullBath","HalfBath","BedroomAbvGr","KitchenAbvGr","TotRmsAbvGrd","Fireplaces","GarageQual","GarageYrBlt","GarageCars","OverallQual","MoSold","YrSold","SalePrice")]
+
+trainCat<-train[,c("MSZoning","Street","Alley","LotShape","LandContour","Utilities","LotConfig","LandSlope","Neighborhood","Condition1","Condition2","BldgType","HouseStyle","OverallQual","OverallCond","RoofStyle","RoofMatl","Exterior1st","Exterior2nd","MasVnrType","ExterQual","ExterCond","Foundation","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","BsmtFinType2","Heating","HeatingQC","CentralAir","Electrical","KitchenQual","Functional","FireplaceQu","GarageType","GarageFinish","GarageQual","GarageCond","PavedDrive","PoolQC","Fence","MiscFeature","MiscVal","SaleType","SaleCondition")]
+
+testC<-test[,c("MasVnrType","LotFrontage","LotArea","BsmtFinSF1","BsmtFinSF2","BsmtUnfSF","TotalBsmtSF","X1stFlrSF","X2ndFlrSF","LowQualFinSF","GrLivArea","GarageArea","WoodDeckSF","OpenPorchSF","EnclosedPorch","X3SsnPorch","ScreenPorch","PoolArea","YearBuilt","YearRemodAdd","BsmtFullBath","BsmtHalfBath","FullBath","HalfBath","BedroomAbvGr","KitchenAbvGr","TotRmsAbvGrd","Fireplaces","GarageYrBlt","GarageCars","GarageQual","MoSold","OverallQual","YrSold","SalePrice")]
+
+testCat<-test[,c("MSZoning","Street","Alley","LotShape","LandContour","Utilities","LotConfig","LandSlope","Neighborhood","Condition1","Condition2","BldgType","HouseStyle","OverallQual","OverallCond","RoofStyle","RoofMatl","Exterior1st","Exterior2nd","MasVnrType","ExterQual","ExterCond","Foundation","BsmtQual","BsmtCond","BsmtExposure","BsmtFinType1","BsmtFinType2","Heating","HeatingQC","CentralAir","Electrical","KitchenQual","Functional","FireplaceQu","GarageType","GarageFinish","GarageQual","GarageCond","PavedDrive","PoolQC","Fence","MiscFeature","MiscVal","SaleType","SaleCondition")]
+```
+
+### Modelo de Regresion Lineal
+Primero, se realizo un modelo de regresion lineal de la variable **SalePrice** contra las demas variables, y gracias al resumen de este modelo se determinaron que las variables "LotArea", "BsmtFinSF1", "X1stFlrSf", "GarageArea", "WoodDeckSF", YearRemodAdd, "KitchenAbvGr", TotRmsAbvGrd y "OverallQual" son determinantes para el comportamiento de la regresion lineal del metodo.
+```{r}
+ModeloLineal<-lm(SalePrice~.,data=trainC)
+summary(ModeloLineal)
+```
+
+Al obtener las variables principales de la regresion lineal se realizo una matriz de correlacion entre ellas para determinar si habia alguna correlacion entre estas variables, donde se determino que ninguna variable estaba fuertemente correlacionada con otra, por lo que se utilizaron las 10 variables para generar el modelo lineal.
+```{r}
+cor(trainC[,c("LotArea","BsmtFinSF1","X1stFlrSF","GarageArea","WoodDeckSF","YearRemodAdd","KitchenAbvGr","TotRmsAbvGrd","OverallQual","YearBuilt")])
+ModeloLineal<-lm(SalePrice~LotArea+BsmtFinSF1+X1stFlrSF+GarageArea+WoodDeckSF+YearRemodAdd+KitchenAbvGr+TotRmsAbvGrd+OverallQual,data=trainC)
+summary(ModeloLineal)
+```
+
+### Predeccion del modelo lineal
+Al obtener un modelo lineal con un valor de R cuadrado multiple y ajustado de 0.841 y 0.8393; respectivamente, y un valor p de 2.2e-16; que se puede considerar como 0, se puede decir que el modelo se ajusta bastante bien a los datos y podria dar resultados bastante buenos al aplicar la prediccion.  
+Con la funcion predict() se obtuvo la prediccion de los precios de las casas, estos valores se colocaron en el datastet de testC y se obtuvo el porcentaje de diferencia entre el precio predicho y el real.
+```{r}
+prediccionP<-predict(ModeloLineal,newdata = testC[,-35])
+testC$PrecioRL<-prediccionP
+testC$DiferenciaRL<-abs((testC$PrecioRL-testC$SalePrice)/(testC$SalePrice)*100)
+testC$DiferenciaRLA<-abs(testC$PrecioRL-testC$SalePrice)
+
+```
+En el porcentaje de diferencia, se encuentran 4 valores con una diferencia porcentual mayor al 100%, por lo que se consideraron como valores atipicos. Finalmente se realizaron 2 medias para ver que tanto influian estos valores en el error medio.  
+Con los valores atipicos se obtuvo un error medio de`r mean(testC[,37])`%, y sin los datos atipicos, se obtuvo un error medio de 
+`r mean(testC[testC$DiferenciaRL<100,37])`%. Aunque estos datos de error son utiles, es necesario conocer la dispersion de los errores, por lo que se realizo un histograma para los porcentajes del algoritmo.
+```{r}
+hist(testC$DiferenciaRL)
+```
+
+Como se puede observar, se encuentra bastante sesgado, pero no explica nada que los datos esten separados en rangos de 50% de error, por lo que al retirar los datos atipicos  se obtuvo lo siguiente:
+```{r}
+hist(testC[testC$DiferenciaRL<100,37])
+```
+En este histograma se puede observar que el porcentaje de error esta bastante sesgado hacia valores entre 0 y 20, por lo que ahora se puede decir que el algoritmo es bastante bueno para predecir el valor de las casas del conjunto de datos, o que en la mayoria de casos tendrá un error menor al 20% considerando la frecuencia de los errores se acumula en un intervalo menor al error mencionado. Por lo que considero que la diferencia minima entre el precio predicho y el precio real sería de 0.2 veces el valor original de la propiedad.  
+No se establecio una diferencia de precio minimo debido a que la media de diferencia de precio es de `r mean(testC$DiferenciaRLA)` con una desviacion estandar de `r sd(testC$DiferenciaRLA)` que es mucho mas grande que la media, indicando que los datos estan bastante dispersos y no podria considerarse utilizar diferencias como medidas para determinar la eficiencia del algoritmo, pues con los porcentajes los resultados son mas concisos.
+
+### Modelo y prediccion de KNN
+Para el modelo de KNN se utilizaron las variables del analisis de Principal Component Analysis del Laboratorio #1 y del modelo de regresion lineal para tratar de mejorar el modelo, considerando que se obtuvieron muy buenos resultados en la regresion lineal. La variable K como se observa es en base al valor entero de la raiz cuadrada de los datos debido a la cantidad de observaciones que presenta el conjunto de datos.  
+De la misma forma, se obtuvo el porcentaje de error entre el precio predicho y el precio real de las casas como se observa en el codigo.
+```{r}
+PredKNN<-knn(trainC[,c("LotArea","BsmtFinSF1","X1stFlrSF","GarageArea","WoodDeckSF","YearRemodAdd","KitchenAbvGr","TotRmsAbvGrd","OverallQual","YearBuilt")],testC[,c("LotArea","BsmtFinSF1","X1stFlrSF","GarageArea","WoodDeckSF","YearRemodAdd","KitchenAbvGr","TotRmsAbvGrd","OverallQual","YearBuilt")],train$SalePrice,k=round(sqrt(nrow(datos))))
+PredKNN<-as.numeric(paste(PredKNN))
+testC$PrecioPKNN<-as.double(PredKNN)
+testC$DiferenciaKNN<-abs((testC$PrecioPKNN-testC$SalePrice)/testC$SalePrice)*100
+testC$DiferenciaKNNA<-abs(testC$PrecioPKNN-testC$SalePrice)
+
+```
+De los datos obtenidos, se observa que al igual que en la regresion lineal, hay 12 datos considerados como atipicios por tener un error mayor al 100% del precio real de la casa. Con estos datos, el algoritmo obtuvo un error medio de `r mean(testC[,40])`%. Sin estos datos atipicos se obtuvo un error medio de `r mean(testC[testC$DiferenciaKNN<100,40])`%. Se observa que al eliminar 2 datos atipicos se reduce el porcentaje de error medio, pero es mucho mas grande que el error medio predicho por la regresion lineal.  
+```{r}
+hist(testC[testC$DiferenciaKNN<100,40])
+```
+Segun el histograma de error de prediccion sin los datos atipicos se obtiene que el sesgo tiende a valores bajos, pero la cantidad de frecuencias es muy bastante grande en el intervalo de 40% y 50% de error de prediccion. Por lo que el algoritmo no es se puede considerar tan bueno para predecir los precios de ventas con las variables dadas como parametros.  
+Al igual que en la regresion lineal, no se considera muy bien hablar de una diferencia minima cuando la media de esta es de `r mean(testC$DiferenciaKNNA)` con una desviacion estandar de `r sd(testC$DiferenciaKNNA)`, que se puede observar que es mas grande que la media, indicando que los datos se encuentran bastante dispersos entre si.  
+
+### Validacion Cruzada
+Finalmente, por medio de la validacion cruzada o Cross Validation se volvio a generar una prediccion de KNN del precio de la casa, utilizando 10 separaciones distintas con 10 iteraciones para comparar el error obtenido con cross validation y KNN.  
+Utilizando las mismas variables de KNN, la separacion del conjunto de datos en 10 grupos y 10 iteraciones se que la cantidad optima para k es 5 debido a que tiene el valor RMSE más pequeño.  
+```{r}
+set.seed(0)
+trctrl <- trainControl(method = "repeatedcv",number = 10,repeats = 10)
+
+knnTrain <- train(SalePrice~LotArea+BsmtFinSF1+X1stFlrSF+GarageArea+WoodDeckSF+YearRemodAdd+KitchenAbvGr+TotRmsAbvGrd+OverallQual+YearBuilt, data = trainC, method = "knn",trControl=trctrl,preProcess = c("center", "scale"), tuneLength=10)
+
+PredKNNCV<-knn(trainC[,c("LotArea","BsmtFinSF1","X1stFlrSF","GarageArea","WoodDeckSF","YearRemodAdd","KitchenAbvGr","TotRmsAbvGrd","OverallQual","YearBuilt")],testC[,c("LotArea","BsmtFinSF1","X1stFlrSF","GarageArea","WoodDeckSF","YearRemodAdd","KitchenAbvGr","TotRmsAbvGrd","OverallQual","YearBuilt")],trainC$SalePrice,k=5)
+PredKNNCV<-as.numeric(paste(PredKNNCV))
+testC$PrecioPKNNCV<-as.double(PredKNNCV)
+testC$DiferenciaKNNCV<-abs((testC$PrecioPKNNCV-testC$SalePrice)/testC$SalePrice)*100
+
+```
+Al utilizar este valor en la prediccion del precio de las casas y descartando los errores mayores al 100% se obtuvo un porcentaje de error medio de `r mean(testC[testC$DiferenciaKNNCV<100,43])`% que es menor al error medio obtenido del metodo KNN con un valor k de `r round(sqrt(nrow(datos)))`. Aunque, vale la pena mencionar que el histograma del error porcentual del precio de venta de la casa se encuentra mejor sesgado que en el metodo original de KNN pues los valores se acumulan bajo el 30% de error en vez del 40% de KNN.
+```{r}
+hist(testC[testC$DiferenciaKNNCV<100,43])
+```
+
+
+## Conclusiones:
+Al observar el porcentaje de error medio de ambos metodos y el histograma de estos errores, se pude concluir que el metodo de la regresion lineal es el metodo mas eficaz o el que deberia ser usado para la prediccion de precios por el hecho que el error medio es 10% mas bajo que el error medio de KNN y KNN con validacion cruzada.
+Tambien, se puede argumentar que la regresion lineal obtuvo mejores resultados observando ambos histogramas, pues la frecuencia de error en el rango de 0% y 10% para la regresion lineal es casi el doble de la frecuencia para el metodo de KNN, y el sesgo tiene una mayor tendencia a porcentajes de error menor al 20%, mientras que para KNN el error no se encuentra acumulado en un intervalo con porcentaje de error optimo.  
+Por lo tanto, el mejor metodo para la prediccion de precios es para la regresion lineal.
